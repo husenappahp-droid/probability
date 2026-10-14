@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binomial PMF Calculator</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #5e6b80;
+      --accent: #315ee8;
+      --accent-light: #edf1ff;
+      --border: #dce3ee;
+      --error: #b42318;
+      --success: #087443;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    header { margin-bottom: 22px; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.65rem, 5vw, 2.25rem); }
+    .subtitle { color: var(--muted); margin: 0; line-height: 1.5; }
+    .panel, .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 6px 22px rgba(20, 35, 70, 0.05);
+    }
+    .panel { margin-bottom: 18px; }
+    .fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    label { display: block; font-weight: 650; font-size: .95rem; margin-bottom: 7px; }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #b9c5d8;
+      border-radius: 9px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    input:focus { outline: 3px solid rgba(49, 94, 232, .16); border-color: var(--accent); }
+    .hint { display: block; color: var(--muted); font-size: .8rem; margin-top: 5px; }
+    button {
+      margin-top: 18px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(.94); }
+    button:focus-visible { outline: 3px solid #9bb1ff; outline-offset: 2px; }
+    .error { color: var(--error); font-weight: 600; margin: 14px 0 0; }
+    .result-card h2 { margin: 0 0 14px; font-size: 1.2rem; }
+    .probability {
+      background: var(--accent-light);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .probability .label { color: var(--muted); font-size: .9rem; font-weight: 650; }
+    .probability .value { font-size: clamp(1.6rem, 6vw, 2.3rem); font-weight: 800; color: #2347bd; overflow-wrap: anywhere; }
+    .math {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.1rem;
+      text-align: center;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+    .meaning { color: var(--muted); line-height: 1.55; margin: 14px 0 0; }
+    .hidden { display: none; }
+    @media (max-width: 560px) {
+      .fields { grid-template-columns: 1fr; gap: 13px; }
+      .panel, .result-card { padding: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Binomial PMF Calculator</h1>
+      <p class="subtitle">Calculate the probability of getting exactly <em>k</em> successes in <em>n</em> independent trials.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Enter the values</h2>
+      <div class="fields">
+        <div>
+          <label for="n">Number of trials (n)</label>
+          <input id="n" type="number" min="0" step="1" value="10" inputmode="numeric">
+          <span class="hint">A whole number, 0 or greater</span>
+        </div>
+        <div>
+          <label for="p">Success probability (p)</label>
+          <input id="p" type="number" min="0" max="1" step="any" value="0.5" inputmode="decimal">
+          <span class="hint">A number from 0 to 1</span>
+        </div>
+        <div>
+          <label for="k">Exact successes (k)</label>
+          <input id="k" type="number" min="0" step="1" value="5" inputmode="numeric">
+          <span class="hint">A whole number from 0 to n</span>
+        </div>
+      </div>
+      <button id="calculate" type="button">Calculate probability</button>
+      <p id="error" class="error" role="alert" aria-live="polite"></p>
+    </section>
+
+    <section id="results" class="result-card" aria-live="polite">
+      <h2>Result</h2>
+      <div class="probability">
+        <div class="label">P(X = k)</div>
+        <div id="probability" class="value">0.24609375</div>
+      </div>
+      <h3>Mathematical expression</h3>
+      <div class="math">
+        P(X = k) = C(n, k) p<sup>k</sup> (1 − p)<sup>n−k</sup>
+        <div id="substitution"></div>
+      </div>
+      <p id="meaning" class="meaning">There is about a 24.61% chance of getting exactly 5 successes in 10 trials.</p>
+    </section>
+  </main>
+
+  <script>
+    const nInput = document.getElementById('n');
+    const pInput = document.getElementById('p');
+    const kInput = document.getElementById('k');
+    const error = document.getElementById('error');
+    const probability = document.getElementById('probability');
+    const substitution = document.getElementById('substitution');
+    const meaning = document.getElementById('meaning');
+
+    function combination(n, k) {
+      if (k < 0 || k > n) return 0;
+      k = Math.min(k, n - k);
+      let result = 1;
+      for (let i = 1; i <= k; i++) {
+        result = result * (n - k + i) / i;
+      }
+      return result;
+    }
+
+    function formatNumber(value) {
+      if (value === 0) return '0';
+      if (value < 0.0000001 || value >= 1e10) return value.toExponential(8);
+      return Number(value.toPrecision(10)).toString();
+    }
+
+    function calculate() {
+      error.textContent = '';
+      const nText = nInput.value.trim();
+      const pText = pInput.value.trim();
+      const kText = kInput.value.trim();
+      const n = Number(nText);
+      const p = Number(pText);
+      const k = Number(kText);
+
+      if (!nText || !Number.isInteger(n) || n < 0) {
+        error.textContent = 'Please enter n as a whole number greater than or equal to 0.';
+        return;
+      }
+      if (n > 10000) {
+        error.textContent = 'Please enter n no greater than 10,000 for this calculator.';
+        return;
+      }
+      if (!pText || !Number.isFinite(p) || p < 0 || p > 1) {
+        error.textContent = 'Please enter p as a number between 0 and 1, inclusive.';
+        return;
+      }
+      if (!kText || !Number.isInteger(k) || k < 0 || k > n) {
+        error.textContent = `Invalid k: please enter a whole number satisfying 0 ≤ k ≤ ${n}.`;
+        return;
+      }
+
+      // Logarithms help avoid overflow for large combinations.
+      let result;
+      if ((p === 0 && k > 0) || (p === 1 && k < n)) {
+        result = 0;
+      } else if (p === 0 || p === 1) {
+        result = 1;
+      } else {
+        const logCombination = logFactorial(n) - logFactorial(k) - logFactorial(n - k);
+        const logProbability = logCombination + k * Math.log(p) + (n - k) * Math.log1p(-p);
+        result = Math.exp(logProbability);
+      }
+
+      const percent = result * 100;
+      probability.textContent = formatNumber(result);
+      substitution.innerHTML =
+        `= C(${n}, ${k}) × ${p}<sup>${k}</sup> × (1 − ${p})<sup>${n-k}</sup>`;
+      meaning.textContent =
+        `There is a ${formatNumber(percent)}% chance of getting exactly ${k} success${k === 1 ? '' : 'es'} in ${n} trials.`;
+    }
+
+    function logFactorial(value) {
+      let total = 0;
+      for (let i = 2; i <= value; i++) total += Math.log(i);
+      return total;
+    }
+
+    document.getElementById('calculate').addEventListener('click', calculate);
+    [nInput, pInput, kInput].forEach(input => {
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') calculate();
+      });
+    });
+    calculate();
+  </script>
+</body>
+</html>

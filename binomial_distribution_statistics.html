@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binomial Distribution Statistics</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #5d687c;
+      --accent: #3157d5;
+      --border: #d7deea;
+      --error: #b42318;
+      --success: #16794b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 16px;
+      display: grid;
+      place-items: start center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(100%, 820px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: clamp(20px, 5vw, 34px);
+      box-shadow: 0 12px 35px rgba(28, 43, 75, .08);
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4vw, 2rem); }
+    .intro { margin: 0 0 26px; color: var(--muted); line-height: 1.55; }
+    .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .field { margin-bottom: 6px; }
+    label { display: block; margin-bottom: 8px; font-weight: 700; }
+    .hint { display: block; margin-top: 6px; color: var(--muted); font-size: .88rem; }
+    input {
+      width: 100%; padding: 12px 13px; border: 1px solid var(--border);
+      border-radius: 10px; background: #fff; color: var(--text); font: inherit;
+    }
+    input:focus { outline: 3px solid rgba(49, 87, 213, .16); border-color: var(--accent); }
+    input[aria-invalid="true"] { border-color: var(--error); }
+    .error { min-height: 1.25em; margin: 6px 0 0; color: var(--error); font-size: .88rem; }
+    .section-title { margin: 30px 0 14px; font-size: 1.15rem; }
+    .values { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .value {
+      flex: 1 1 130px; padding: 12px; background: #f0f4ff;
+      border: 1px solid #dce5ff; border-radius: 10px;
+    }
+    .value span { display: block; color: var(--muted); font-size: .85rem; margin-bottom: 4px; }
+    .value strong { font-size: 1.15rem; overflow-wrap: anywhere; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .stat-card {
+      padding: 18px; border: 1px solid var(--border); border-radius: 12px;
+      background: #fff; min-height: 120px;
+    }
+    .stat-card .name { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+    .stat-card .number { margin: 0; font-size: clamp(1.45rem, 4vw, 1.8rem); font-weight: 750; letter-spacing: -.02em; }
+    .stat-card .formula { margin: 8px 0 0; color: var(--muted); font-size: .82rem; }
+    #status { margin: 14px 0 0; font-size: .9rem; color: var(--success); }
+    #status.invalid { color: var(--error); }
+    .note { margin: 22px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Probability toolkit</p>
+    <h1>Binomial Distribution</h1>
+    <p class="intro">Choose the number of trials and the probability of success. The statistics update automatically for valid inputs.</p>
+
+    <form id="binomial-form" novalidate>
+      <div class="inputs">
+        <div class="field">
+          <label for="trials">Number of trials (n)</label>
+          <input id="trials" name="trials" type="number" min="1" step="1" value="20" required
+                 inputmode="numeric" aria-describedby="trials-hint trials-error">
+          <span class="hint" id="trials-hint">Must be a positive integer.</span>
+          <p class="error" id="trials-error" aria-live="polite"></p>
+        </div>
+        <div class="field">
+          <label for="probability">Probability of success (p)</label>
+          <input id="probability" name="probability" type="number" min="0" max="1" step="any" value="0.35" required
+                 inputmode="decimal" aria-describedby="probability-hint probability-error">
+          <span class="hint" id="probability-hint">Enter a value from 0 to 1, inclusive.</span>
+          <p class="error" id="probability-error" aria-live="polite"></p>
+        </div>
+      </div>
+    </form>
+
+    <h2 class="section-title">Selected values</h2>
+    <div class="values" aria-live="polite">
+      <div class="value"><span>Trials (n)</span><strong id="selected-n">20</strong></div>
+      <div class="value"><span>Success probability (p)</span><strong id="selected-p">0.35</strong></div>
+    </div>
+
+    <h2 class="section-title">Binomial statistics</h2>
+    <section class="stats" aria-live="polite" aria-label="Calculated binomial statistics">
+      <article class="stat-card">
+        <p class="name">Mean</p><p class="number" id="mean">7</p>
+        <p class="formula">np</p>
+      </article>
+      <article class="stat-card">
+        <p class="name">Variance</p><p class="number" id="variance">4.55</p>
+        <p class="formula">np(1 − p)</p>
+      </article>
+      <article class="stat-card">
+        <p class="name">Standard deviation</p><p class="number" id="stddev">2.1330729008</p>
+        <p class="formula">√Variance</p>
+      </article>
+      <article class="stat-card">
+        <p class="name">Second moment E[X²]</p><p class="number" id="second-moment">53.55</p>
+        <p class="formula">Variance + Mean²</p>
+      </article>
+      <article class="stat-card">
+        <p class="name">Skewness</p><p class="number" id="skewness">0.1406409</p>
+        <p class="formula">(1 − 2p) / √(np(1 − p))</p>
+      </article>
+    </section>
+    <p id="status" role="status">Inputs are valid.</p>
+    <p class="note">Calculations use the formulas shown on each card. When variance is zero (for example, p = 0 or p = 1), standard deviation is 0 and skewness is undefined, so it is displayed as “Undefined”.</p>
+  </main>
+
+  <script>
+    const trialsInput = document.getElementById("trials");
+    const probabilityInput = document.getElementById("probability");
+    const trialsError = document.getElementById("trials-error");
+    const probabilityError = document.getElementById("probability-error");
+    const selectedN = document.getElementById("selected-n");
+    const selectedP = document.getElementById("selected-p");
+    const status = document.getElementById("status");
+
+    const format = value => {
+      if (!Number.isFinite(value)) return "Undefined";
+      return value.toLocaleString("en-US", {
+        maximumFractionDigits: 8,
+        useGrouping: false
+      });
+    };
+
+    function validateAndCalculate() {
+      const nRaw = trialsInput.value.trim();
+      const pRaw = probabilityInput.value.trim();
+      const n = Number(nRaw);
+      const p = Number(pRaw);
+
+      const nMessage = (nRaw === "" || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0)
+        ? "Enter a positive integer for n." : "";
+      const pMessage = (pRaw === "" || !Number.isFinite(p) || p < 0 || p > 1)
+        ? "Enter a probability between 0 and 1, inclusive." : "";
+
+      trialsError.textContent = nMessage;
+      probabilityError.textContent = pMessage;
+      trialsInput.setAttribute("aria-invalid", String(Boolean(nMessage)));
+      probabilityInput.setAttribute("aria-invalid", String(Boolean(pMessage)));
+
+      const valid = !nMessage && !pMessage;
+      status.classList.toggle("invalid", !valid);
+
+      if (!valid) {
+        selectedN.textContent = nMessage ? "—" : String(n);
+        selectedP.textContent = pMessage ? "—" : String(p);
+        ["mean", "variance", "stddev", "second-moment", "skewness"].forEach(id => {
+          document.getElementById(id).textContent = "—";
+        });
+        status.textContent = "Please correct the invalid input(s) to calculate statistics.";
+        return;
+      }
+
+      const mean = n * p;
+      const variance = n * p * (1 - p);
+      const standardDeviation = Math.sqrt(variance);
+      const secondMoment = variance + mean ** 2;
+      const skewness = variance === 0 ? NaN : (1 - 2 * p) / Math.sqrt(variance);
+
+      selectedN.textContent = String(n);
+      selectedP.textContent = String(p);
+      document.getElementById("mean").textContent = format(mean);
+      document.getElementById("variance").textContent = format(variance);
+      document.getElementById("stddev").textContent = format(standardDeviation);
+      document.getElementById("second-moment").textContent = format(secondMoment);
+      document.getElementById("skewness").textContent = format(skewness);
+      status.textContent = "Inputs are valid. Statistics updated.";
+    }
+
+    trialsInput.addEventListener("input", validateAndCalculate);
+    probabilityInput.addEventListener("input", validateAndCalculate);
+    document.getElementById("binomial-form").addEventListener("submit", event => {
+      event.preventDefault();
+      validateAndCalculate();
+    });
+    validateAndCalculate();
+  </script>
+</body>
+</html>

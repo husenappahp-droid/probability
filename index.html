@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIML Lab: Discrete Probability Distributions</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        header {
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        nav a:hover, nav a.active {
+            color: var(--primary);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--background);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"], input[type="range"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .math-block {
+            background-color: var(--background);
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+        }
+
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 300px;
+            border-left: 2px solid var(--text);
+            border-bottom: 2px solid var(--text);
+            padding: 1rem 0.5rem 0 1rem;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            height: 100%;
+            justify-content: flex-end;
+            position: relative;
+        }
+
+        .bar {
+            background-color: var(--primary);
+            width: 70%;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.3s ease, background-color 0.2s;
+            position: relative;
+        }
+
+        .bar:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .bar-label {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            color: var(--text);
+        }
+
+        .tooltip {
+            position: absolute;
+            top: -35px;
+            background: #334155;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .bar-wrapper:hover .tooltip {
+            opacity: 1;
+        }
+
+        .placeholder-text {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 3rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <div class="brand">AIML Lab Platform</div>
+            <nav>
+                <ul>
+                    <li><a onclick="switchPage('home')" id="nav-home" class="active">Home</a></li>
+                    <li><a onclick="switchPage('binomial')" id="nav-binomial">Binomial</a></li>
+                    <li><a onclick="switchPage('poisson')" id="nav-poisson">Poisson</a></li>
+                    <li><a onclick="switchPage('geometric')" id="nav-geometric">Geometric</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div id="page-home" class="page active">
+            <h1>Discrete Probability Distributions</h1>
+            <p class="subtitle">Welcome to the Artificial Intelligence & Machine Learning Laboratory workbench.</p>
+            <div class="card">
+                <h2>Laboratory Framework Scope</h2>
+                <p>This interactive application helps students explore the behaviors, parameters, and probability mass functions (PMF) of key discrete distributions used across modern data modeling and machine learning applications.</p>
+                <br>
+                <p><strong>Available Modules:</strong> Use the navigation bar above to load your active assignment. Currently, the <em>Binomial Distribution</em> pipeline is deployed for verification.</p>
+            </div>
+        </div>
+
+        <div id="page-binomial" class="page">
+            <h1>Binomial Distribution Module</h1>
+            <p class="subtitle">Explore the probability of a specific number of successes across independent Bernoulli trials.</p>
+            
+            <div class="dashboard-grid">
+                <div class="controls-panel">
+                    <div class="card">
+                        <h2>Parameters</h2>
+                        <div class="form-group">
+                            <label for="param-n">Number of Trials (n):</label>
+                            <input type="number" id="param-n" min="1" max="50" value="10" oninput="calculateBinomial()">
+                        </div>
+                        <div class="form-group">
+                            <label for="param-p">Probability of Success (p):</label>
+                            <div class="range-container">
+                                <input type="range" id="param-p" min="0" max="1" step="0.05" value="0.5" oninput="updatePValue(this.value)">
+                                <span id="p-val-display" style="min-width: 2.5rem; font-weight: bold;">0.50</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Mathematical Formula</h2>
+                        <div class="math-block">
+                            P(X = k) = ⁿCₖ · pᵏ · (1-p)ⁿ⁻ᵏ
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Where ⁿCₖ = n! / (k!(n-k)!) represents the binomial coefficient.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="output-panel">
+                    <div class="card">
+                        <h2>Probability Mass Function (PMF) Graph</h2>
+                        <div class="chart-container" id="binomial-chart">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Statistical Properties</h2>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="math-block">Mean (μ) = <span id="stat-mean">5.00</span></div>
+                            <div class="math-block">Variance (σ²) = <span id="stat-var">2.50</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-poisson" class="page">
+            <h1>Poisson Distribution</h1>
+            <p class="subtitle">Module Pending Implementation.</p>
+            <div class="card">
+                <p class="placeholder-text">This section is reserved for future laboratory iterations evaluating the arrival rate of distinct independent intervals (λ).</p>
+            </div>
+        </div>
+
+        <div id="page-geometric" class="page">
+            <h1>Geometric Distribution</h1>
+            <p class="subtitle">Module Pending Implementation.</p>
+            <div class="card">
+                <p class="placeholder-text">This section is reserved for future laboratory iterations modeling the number of trials required to observe the first success.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+
+            document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+            document.getElementById(`nav-${pageId}`).classList.add('active');
+
+            if(pageId === 'binomial') {
+                calculateBinomial();
+            }
+        }
+
+        function updatePValue(val) {
+            document.getElementById('p-val-display').innerText = parseFloat(val).toFixed(2);
+            calculateBinomial();
+        }
+
+        function factorial(num) {
+            if (num === 0 || num === 1) return 1;
+            let res = 1;
+            for (let i = 2; i <= num; i++) res *= i;
+            return res;
+        }
+
+        function nCr(n, r) {
+            return factorial(n) / (factorial(r) * factorial(n - r));
+        }
+
+        function calculateBinomial() {
+            let n = parseInt(document.getElementById('param-n').value);
+            let p = parseFloat(document.getElementById('param-p').value);
+
+            if (isNaN(n) || n < 1) n = 1;
+            if (n > 50) { n = 50; document.getElementById('param-n').value = 50; }
+            if (isNaN(p) || p < 0) p = 0;
+            if (p > 1) p = 1;
+
+            const chart = document.getElementById('binomial-chart');
+            chart.innerHTML = '';
+
+            let probabilities = [];
+            let maxP = 0;
+
+            for (let k = 0; k <= n; k++) {
+                let probability = nCr(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+                probabilities.push({ k: k, p: probability });
+                if (probability > maxP) maxP = probability;
+            }
+
+            probabilities.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bar-wrapper';
+
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                let percentageHeight = maxP > 0 ? (item.p / maxP) * 85 : 0; 
+                bar.style.height = `${percentageHeight}%`;
+
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.innerText = `P(X=${item.k}) = ${item.p.toFixed(4)}`;
+                bar.appendChild(tooltip);
+
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.innerText = item.k;
+
+                wrapper.appendChild(bar);
+                wrapper.appendChild(label);
+                chart.appendChild(wrapper);
+            });
+
+            let mean = n * p;
+            let variance = n * p * (1 - p);
+            document.getElementById('stat-mean').innerText = mean.toFixed(2);
+            document.getElementById('stat-var').innerText = variance.toFixed(2);
+        }
+    </script>
+</body>
+</html>

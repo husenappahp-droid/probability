@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!-- saved from url=(0056)file:///C:/Users/husen/Downloads/binomial_pmf_graph.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binomial Distribution PMF Graph</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; font-family: Arial, Helvetica, sans-serif; background: #f3f6fb; color: #1f2937; }
+    main { max-width: 1000px; margin: 24px auto; padding: 26px; background: white; border-radius: 16px; box-shadow: 0 8px 28px rgba(20,40,80,.10); }
+    h1 { color: #173b70; margin-top: 0; }
+    p { line-height: 1.55; color: #526174; }
+    .inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin: 22px 0; }
+    label { display: block; font-weight: 700; margin-bottom: 8px; }
+    input { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+    .stat { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 10px; }
+    .stat strong { color: #1e40af; }
+    .chart-wrap { position: relative; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #fff; }
+    canvas { display: block; width: 100%; height: 440px; }
+    #tooltip { position: absolute; display: none; pointer-events: none; z-index: 2; background: #111827; color: #fff; padding: 9px 11px; border-radius: 7px; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 12px #0002; white-space: nowrap; }
+    .legend { display: flex; align-items: center; gap: 8px; margin: 12px 4px 2px; font-size: .92rem; color: #475569; }
+    .swatch { display: inline-block; width: 22px; height: 4px; background: #dc2626; }
+    #message { color: #b91c1c; min-height: 1.3em; }
+    @media (max-width: 600px) { body { padding: 10px; } main { margin: 8px auto; padding: 16px; } canvas { height: 360px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Binomial Distribution PMF Graph</h1>
+  <p>Explore the probability mass function (PMF) of a binomial random variable. Change <strong>n</strong> or <strong>p</strong> to update the graph automatically.</p>
+
+  <div class="inputs">
+    <div>
+      <label for="n">Number of trials (n)</label>
+      <input id="n" type="number" min="1" max="500" step="1" value="20">
+    </div>
+    <div>
+      <label for="p">Probability of success (p)</label>
+      <input id="p" type="number" min="0" max="1" step="any" value="0.35">
+    </div>
+  </div>
+  <div id="message" role="alert"></div>
+
+  <div class="stats">
+    <div class="stat">Mean (μ = np): <strong id="mean">7</strong></div>
+    <div class="stat">Trials (n): <strong id="nDisplay">20</strong></div>
+    <div class="stat">Success probability (p): <strong id="pDisplay">0.35</strong></div>
+  </div>
+
+  <div class="chart-wrap" id="chartWrap">
+    <canvas id="chart" aria-label="Binomial probability mass function bar chart" width="788" height="550"></canvas>
+    <div id="tooltip" style="display: none;"></div>
+  </div>
+  <div class="legend"><span class="swatch"></span> Mean reference line (μ = np), dashed</div>
+  <p><strong>X-axis:</strong> Number of successes X &nbsp; | &nbsp; <strong>Y-axis:</strong> Probability P(X)</p>
+  <p>Hover over or tap a bar to see <strong>X = value</strong> and <strong>P(X=value) = probability</strong>.</p>
+</main>
+
+<script>
+const nInput = document.getElementById('n');
+const pInput = document.getElementById('p');
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+const chartWrap = document.getElementById('chartWrap');
+let bars = [];
+let chartData = [];
+let mean = 0;
+let plot = {};
+
+function probabilities(n, p) {
+  const probs = new Array(n + 1).fill(0);
+  if (p === 0) { probs[0] = 1; return probs; }
+  if (p === 1) { probs[n] = 1; return probs; }
+
+  // Start at the mode, then recur in both directions to avoid underflow
+  // when n is large. Normalize to ensure probabilities sum to 1.
+  const mode = Math.floor((n + 1) * p);
+  probs[mode] = 1;
+  for (let x = mode; x > 0; x--) {
+    probs[x - 1] = probs[x] * (x / (n - x + 1)) * ((1 - p) / p);
+  }
+  for (let x = mode; x < n; x++) {
+    probs[x + 1] = probs[x] * ((n - x) / (x + 1)) * (p / (1 - p));
+  }
+  const total = probs.reduce((a, b) => a + b, 0);
+  return probs.map(v => v / total);
+}
+
+function draw() {
+  const nText = nInput.value.trim();
+  const pText = pInput.value.trim();
+  const n = Number(nText), p = Number(pText);
+  const message = document.getElementById('message');
+  message.textContent = '';
+  tooltip.style.display = 'none';
+
+  if (!nText || !Number.isInteger(n) || n < 1 || n > 500) {
+    message.textContent = 'Enter n as an integer from 1 to 500 so the chart remains readable.';
+    clearChart();
+    return;
+  }
+  if (!pText || !Number.isFinite(p) || p < 0 || p > 1) {
+    message.textContent = 'Enter p between 0 and 1, inclusive.';
+    clearChart();
+    return;
+  }
+
+  chartData = probabilities(n, p);
+  mean = n * p;
+  document.getElementById('mean').textContent = mean.toFixed(4).replace(/\.?0+$/, '');
+  document.getElementById('nDisplay').textContent = n;
+  document.getElementById('pDisplay').textContent = p;
+  renderChart();
+}
+
+function clearChart() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, rect.width * dpr);
+  canvas.height = Math.max(1, rect.height * dpr);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  bars = [];
+}
+
+function renderChart() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(300, rect.width);
+  const H = rect.height || 440;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const left = 66, right = 20, top = 24, bottom = 62;
+  const pw = W - left - right, ph = H - top - bottom;
+  const maxProb = Math.max(...chartData);
+  const yMax = maxProb * 1.12 || 1;
+  plot = { left, right, top, bottom, pw, ph, W, H, yMax };
+  bars = [];
+
+  // Horizontal grid and y-axis labels.
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const val = yMax * i / 4;
+    const y = top + ph - (val / yMax) * ph;
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(W - right, y); ctx.stroke();
+    ctx.fillStyle = '#475569';
+    ctx.fillText(val.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''), left - 9, y);
+  }
+
+  const slot = pw / (chartData.length);
+  const barWidth = Math.max(1, Math.min(28, slot * 0.72));
+  chartData.forEach((prob, x) => {
+    const barH = (prob / yMax) * ph;
+    const bx = left + x * slot + (slot - barWidth) / 2;
+    const by = top + ph - barH;
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(bx, by, barWidth, barH);
+    bars.push({ x, prob, left: bx, right: bx + barWidth, top: by, bottom: top + ph, center: left + (x + 0.5) * slot });
+  });
+
+  // Mean reference line at μ = n*p, plotted between discrete bar centers.
+  const meanX = left + (mean + 0.5) * slot;
+  ctx.save();
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath(); ctx.moveTo(meanX, top); ctx.lineTo(meanX, top + ph); ctx.stroke();
+  ctx.restore();
+
+  // Axes.
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, top + ph); ctx.lineTo(W - right, top + ph); ctx.stroke();
+
+  // X-axis labels: show every integer for smaller n; skip labels for larger n.
+  const step = chartData.length <= 31 ? 1 : Math.ceil(chartData.length / 20);
+  ctx.fillStyle = '#475569'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = chartData.length > 100 ? '10px Arial' : '11px Arial';
+  for (let x = 0; x < chartData.length; x += step) {
+    ctx.fillText(String(x), left + (x + 0.5) * slot, top + ph + 8);
+  }
+  ctx.fillText(String(chartData.length - 1), left + (chartData.length - 0.5) * slot, top + ph + 8);
+
+  ctx.fillStyle = '#1f2937'; ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Number of successes X', left + pw / 2, H - 15);
+  ctx.save();
+  ctx.translate(17, top + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Probability P(X)', 0, 0);
+  ctx.restore();
+}
+
+function showTooltip(event) {
+  if (!bars.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const px = event.clientX - rect.left;
+  const py = event.clientY - rect.top;
+  const { left, top, pw, ph } = plot;
+  if (px < left || px > left + pw || py < top || py > top + ph) {
+    tooltip.style.display = 'none';
+    return;
+  }
+  const slot = pw / chartData.length;
+  const x = Math.floor((px - left) / slot);
+  const bar = bars[Math.max(0, Math.min(chartData.length - 1, x))];
+  tooltip.innerHTML = `X = ${bar.x}<br>P(X=${bar.x}) = ${bar.prob.toPrecision(8)}`;
+  tooltip.style.display = 'block';
+  const wrapRect = chartWrap.getBoundingClientRect();
+  let tx = event.clientX - wrapRect.left + 12;
+  let ty = event.clientY - wrapRect.top + 12;
+  if (tx + 190 > wrapRect.width) tx = event.clientX - wrapRect.left - 190;
+  if (ty + 55 > wrapRect.height) ty = event.clientY - wrapRect.top - 60;
+  tooltip.style.left = Math.max(4, tx) + 'px';
+  tooltip.style.top = Math.max(4, ty) + 'px';
+}
+
+canvas.addEventListener('mousemove', showTooltip);
+canvas.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+canvas.addEventListener('click', showTooltip);
+nInput.addEventListener('input', draw);
+pInput.addEventListener('input', draw);
+window.addEventListener('resize', draw);
+draw();
+</script>
+
+
+</body></html>

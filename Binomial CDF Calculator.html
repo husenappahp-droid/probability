@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!-- saved from url=(0061)file:///C:/Users/husen/Downloads/binomial_cdf_calculator.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binomial CDF Calculator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f3f6fb; color: #1f2937;
+    }
+    .container {
+      max-width: 760px; margin: 30px auto; padding: 28px;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(20, 40, 80, .10);
+    }
+    h1 { margin-top: 0; color: #173b70; }
+    .subtitle { color: #526174; line-height: 1.5; }
+    .inputs {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px; margin: 24px 0;
+    }
+    label { display: block; font-weight: 700; margin-bottom: 8px; }
+    input {
+      width: 100%; padding: 12px; font-size: 1rem;
+      border: 1px solid #cbd5e1; border-radius: 8px;
+    }
+    button {
+      padding: 12px 20px; border: 0; border-radius: 8px;
+      background: #1d4ed8; color: white; font-size: 1rem;
+      font-weight: 700; cursor: pointer;
+    }
+    button:hover { background: #1e40af; }
+    .results {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px; margin-top: 24px;
+    }
+    .result {
+      padding: 18px; background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: 10px;
+    }
+    .result h2 { margin: 0 0 10px; font-size: 1.05rem; color: #1e40af; }
+    .value { font-size: 1.5rem; font-weight: 700; overflow-wrap: anywhere; }
+    .explanation {
+      margin-top: 22px; padding: 16px; border-left: 4px solid #2563eb;
+      background: #f8fafc; line-height: 1.6;
+    }
+    #message { margin-top: 12px; color: #b91c1c; min-height: 1.2em; }
+    .formula { font-family: "Courier New", monospace; overflow-wrap: anywhere; }
+    @media (max-width: 480px) { body { padding: 12px; } .container { padding: 20px; margin: 10px auto; } }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Binomial CDF Calculator</h1>
+    <p class="subtitle">
+      Calculate cumulative probability for a binomial random variable X using the
+      number of trials <strong>n</strong>, probability of success <strong>p</strong>,
+      and the selected value <strong>k</strong>.
+    </p>
+
+    <div class="inputs">
+      <div>
+        <label for="n">Number of trials (n)</label>
+        <input id="n" type="number" min="1" step="1" value="20">
+      </div>
+      <div>
+        <label for="p">Probability of success (p)</label>
+        <input id="p" type="number" min="0" max="1" step="any" value="0.35">
+      </div>
+      <div>
+        <label for="k">Number of successes (k)</label>
+        <input id="k" type="number" min="0" step="1" value="7">
+      </div>
+    </div>
+
+    <button id="calculate" type="button">Calculate Probability</button>
+    <div id="message" role="alert"></div>
+
+    <section class="results" aria-live="polite">
+      <div class="result">
+        <h2>P(X ≤ k)</h2>
+        <div class="value" id="cdf">0.60102660</div>
+        <p>Probability of k or fewer successes.</p>
+      </div>
+      <div class="result">
+        <h2>P(X &gt; k) = 1 − P(X ≤ k)</h2>
+        <div class="value" id="upper">0.39897340</div>
+        <p>Probability of more than k successes.</p>
+      </div>
+    </section>
+
+    <div class="explanation">
+      <strong>Explanation:</strong>
+      “P(X ≤ k) means the probability of getting k or fewer successes.”
+      <p class="formula">P(X ≤ k) = Σ P(X = x), for x = 0, 1, …, k</p>
+      <p>For a binomial distribution, P(X = x) = C(n, x) p<sup>x</sup> (1 − p)<sup>n − x</sup>.</p>
+    </div>
+  </main>
+
+  <script>
+    // Computes binomial probabilities recursively to avoid large factorials.
+    function binomialCDF(n, p, k) {
+      if (k < 0) return 0;
+      if (k >= n) return 1;
+
+      // Handle edge cases exactly.
+      if (p === 0) return 1;
+      if (p === 1) return 0;
+
+      let probability = Math.pow(1 - p, n); // P(X = 0)
+      let sum = probability;
+
+      for (let x = 1; x <= k; x++) {
+        probability *= ((n - x + 1) / x) * (p / (1 - p));
+        sum += probability;
+      }
+      return Math.min(1, Math.max(0, sum));
+    }
+
+    function calculate() {
+      const nInput = document.getElementById('n').value.trim();
+      const pInput = document.getElementById('p').value.trim();
+      const kInput = document.getElementById('k').value.trim();
+      const message = document.getElementById('message');
+      message.textContent = '';
+
+      const n = Number(nInput), p = Number(pInput), k = Number(kInput);
+      if (!nInput || !Number.isInteger(n) || n < 1) {
+        message.textContent = 'Please enter n as a positive integer.';
+        return;
+      }
+      if (!pInput || !Number.isFinite(p) || p < 0 || p > 1) {
+        message.textContent = 'Please enter p between 0 and 1, inclusive.';
+        return;
+      }
+      if (!kInput || !Number.isInteger(k) || k < 0 || k > n) {
+        message.textContent = 'Please enter k as an integer from 0 to n.';
+        return;
+      }
+
+      const cdf = binomialCDF(n, p, k);
+      const upper = 1 - cdf;
+      document.getElementById('cdf').textContent = cdf.toFixed(8);
+      document.getElementById('upper').textContent = upper.toFixed(8);
+    }
+
+    document.getElementById('calculate').addEventListener('click', calculate);
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') calculate();
+      });
+    });
+    calculate();
+  </script>
+
+
+</body></html>
